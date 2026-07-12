@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
-
+const API_URL = import.meta.env.VITE_API_URL;
 const SERVICES = [
   'Website Development',
   'Mobile App Development',
@@ -35,7 +35,7 @@ export default function Contact() {
     setErrorMsg('')
 
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch(`${API_URL}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
