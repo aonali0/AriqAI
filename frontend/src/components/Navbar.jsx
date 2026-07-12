@@ -21,6 +21,16 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const handleNavClick = (e, href) => {
+    e.preventDefault()
+    setOpen(false)
+    const target = document.querySelector(href)
+    // small delay lets the mobile menu finish closing before we scroll
+    setTimeout(() => {
+      target?.scrollIntoView({ behavior: 'smooth' })
+    }, 50)
+  }
+
   return (
     <motion.header
       initial={{ y: -80, opacity: 0 }}
@@ -48,6 +58,7 @@ export default function Navbar() {
               <a
                 key={link.href}
                 href={link.href}
+                onClick={(e) => handleNavClick(e, link.href)}
                 className="text-sm text-mist hover:text-frost transition-colors relative group"
               >
                 {link.label}
@@ -86,7 +97,7 @@ export default function Navbar() {
                   <a
                     key={link.href}
                     href={link.href}
-                    onClick={() => setOpen(false)}
+                    onClick={(e) => handleNavClick(e, link.href)}
                     className="text-mist hover:text-frost transition-colors text-sm font-medium"
                   >
                     {link.label}
@@ -94,7 +105,7 @@ export default function Navbar() {
                 ))}
                 <a
                   href="#contact"
-                  onClick={() => setOpen(false)}
+                  onClick={(e) => handleNavClick(e, '#contact')}
                   className="inline-flex justify-center rounded-full bg-ariq-gradient px-5 py-2.5 text-sm font-semibold text-void"
                 >
                   Start a Project

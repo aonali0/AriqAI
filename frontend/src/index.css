@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+section[id] {
+  scroll-margin-top: 90px;
+}
+
 * {
   scroll-behavior: smooth;
 }
