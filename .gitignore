@@ -5,7 +5,7 @@ backend/.pytest_cache/
 
 # Environment
 backend/.env
-
+frontend/.env
 # Node
 frontend/node_modules/
 
