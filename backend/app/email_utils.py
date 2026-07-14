@@ -1,4 +1,5 @@
 import os
+import socket
 import smtplib
 import logging
 from email.mime.multipart import MIMEMultipart
@@ -7,6 +8,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger("ariq_ai.email")
+
+# Render's network has broken/unreliable IPv6 routing, which makes smtplib
+# randomly pick an IPv6 address for smtp.gmail.com and fail with
+# "Network is unreachable". Forcing IPv4-only DNS resolution fixes it.
+_orig_getaddrinfo = socket.getaddrinfo
+
+
+def _ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+
+socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
@@ -17,6 +30,7 @@ BUSINESS_EMAIL = os.getenv("BUSINESS_EMAIL")
 
 
 def _send(to_email: str, subject: str, html_body: str, text_body: str, reply_to: str | None = None):
+    """Low-level SMTP sender. Raises on failure so callers can log it."""
     if not all([SMTP_HOST, SMTP_USER, SMTP_PASSWORD, to_email]):
         logger.warning("SMTP not configured — skipping email send to %s", to_email)
         return
@@ -28,9 +42,6 @@ def _send(to_email: str, subject: str, html_body: str, text_body: str, reply_to:
     if reply_to:
         msg["Reply-To"] = reply_to
 
-    # IMPORTANT: plain-text part must be attached FIRST, then HTML.
-    # Email clients/spam filters use the last part as preferred, but
-    # having both (instead of HTML-only) significantly reduces spam scoring.
     msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 
@@ -41,6 +52,7 @@ def _send(to_email: str, subject: str, html_body: str, text_body: str, reply_to:
 
 
 def send_lead_notification(name: str, email: str, phone: str, company: str, service: str, message: str):
+    """Email #1 — goes to YOU (BUSINESS_EMAIL) when a customer submits the form."""
     subject = f"New Inquiry: {name}" + (f" — {service}" if service else "")
     text = f"""New Lead from Ariq AI Website
 
@@ -71,6 +83,7 @@ Message:
 
 
 def send_customer_acknowledgement(name: str, email: str):
+    """Email #2 — goes to the CUSTOMER confirming their submission was received."""
     first_name = name.split()[0]
     subject = "We've received your message — Ariq AI"
     text = f"""Thanks for reaching out, {first_name}!
