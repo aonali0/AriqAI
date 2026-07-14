@@ -21,9 +21,9 @@ app = FastAPI(title="Ariq AI API", version="1.0.0")
 origins = os.getenv("FRONTEND_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in origins],
+    allow_origins=[o.strip() for o in origins if o.strip()],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
