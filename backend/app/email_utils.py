@@ -1,54 +1,27 @@
 import os
-import socket
-import smtplib
-import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import resend
 from dotenv import load_dotenv
 
 load_dotenv()
-logger = logging.getLogger("ariq_ai.email")
-
-# Render's network has broken/unreliable IPv6 routing, which makes smtplib
-# randomly pick an IPv6 address for smtp.gmail.com and fail with
-# "Network is unreachable". Forcing IPv4-only DNS resolution fixes it.
-_orig_getaddrinfo = socket.getaddrinfo
-
-
-def _ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-    return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-
-
-socket.getaddrinfo = _ipv4_only_getaddrinfo
-
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+resend.api_key = os.getenv("RESEND_API_KEY")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Ariq AI")
 BUSINESS_EMAIL = os.getenv("BUSINESS_EMAIL")
 
 
 def _send(to_email: str, subject: str, html_body: str, text_body: str, reply_to: str | None = None):
-    """Low-level SMTP sender. Raises on failure so callers can log it."""
-    if not all([SMTP_HOST, SMTP_USER, SMTP_PASSWORD, to_email]):
-        logger.warning("SMTP not configured — skipping email send to %s", to_email)
+    """Low-level sender via Resend's HTTPS API (SMTP ports are blocked on Render)."""
+    if not os.getenv("RESEND_API_KEY") or not to_email:
         return
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
-    msg["To"] = to_email
+    params = {
+        "from": f"{SMTP_FROM_NAME} <onboarding@resend.dev>",
+        "to": [to_email],
+        "subject": subject,
+        "html": html_body,
+        "text": text_body,
+    }
     if reply_to:
-        msg["Reply-To"] = reply_to
-
-    msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.sendmail(SMTP_USER, to_email, msg.as_string())
+        params["reply_to"] = reply_to
+    resend.Emails.send(params)
 
 
 def send_lead_notification(name: str, email: str, phone: str, company: str, service: str, message: str):
