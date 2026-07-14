@@ -35,11 +35,11 @@ export default function Contact() {
     setErrorMsg('')
 
     try {
-      const res = await fetch(`${API_URL}/api/contact`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
-      })
+     })
       const data = await res.json()
 
       if (!res.ok) {
